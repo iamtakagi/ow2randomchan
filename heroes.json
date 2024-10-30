@@ -84,6 +84,12 @@
         "role": "damage"
     },
     {
+        "key": "juno",
+        "name": "Juno",
+        "portrait": "https://d15f34w2p8l1cc.cloudfront.net/overwatch/585b2d60cbd3c271b6ad5ad0922537af0c6836fab6c89cb9979077f7bb0832b5.png",
+        "role": "support"
+    },
+    {
         "key": "kiriko",
         "name": "Kiriko",
         "portrait": "https://d15f34w2p8l1cc.cloudfront.net/overwatch/088aff2153bdfa426984b1d5c912f6af0ab313f0865a81be0edd114e9a2f79f9.png",

@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"net/http"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -24,6 +26,66 @@ type Hero struct {
 	Role     string `json:"role"`
 }
 
+type HeroDetail struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Portrait    string `json:"portrait"`
+	Role        string `json:"role"`
+	Location    string `json:"location"`
+	Birthday    string `json:"birthday"`
+	Age         int    `json:"age"`
+	Hitpoints   struct {
+		Shields int `json:"shields"`
+		Armor   int `json:"armor"`
+		Health  int `json:"health"`
+		Total   int `json:"total"`
+	} `json:"hitpoints"`
+	Abilities []struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Icon        string `json:"icon"`
+		Video       struct {
+			Thumbnail string `json:"thumbnail"`
+			Link      struct {
+				Mp4  string `json:"mp4"`
+				Webm string `json:"webm"`
+			} `json:"link"`
+		} `json:"video"`
+	} `json:"abilities"`
+	Story struct {
+		Summary string `json:"summary"`
+		Media   struct {
+			Type string `json:"type"`
+			Link string `json:"link"`
+		} `json:"media"`
+		Chapters []struct {
+			Title   string `json:"title"`
+			Content string `json:"content"`
+			Picture string `json:"picture"`
+		} `json:"chapters"`
+	} `json:"story"`
+}
+
+func fetchHeroDetail(key string) (*HeroDetail, error) {
+	response, err := http.Get("https://overfast-api.tekrop.fr/heroes/" + key)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Error: Status code %d", response.StatusCode)
+	}
+
+	var heroDetail *HeroDetail
+
+	if err := json.NewDecoder(response.Body).Decode(&heroDetail); err != nil {
+		return nil, err
+	}
+
+	return heroDetail, nil
+}
+
 func main() {
 	var err error
 	Token = os.Getenv("DISCORD_TOKEN")
@@ -34,7 +96,7 @@ func main() {
 		return
 	}
 
-	raw, err := ioutil.ReadFile("./heros.json")
+	raw, err := ioutil.ReadFile("./heroes.json")
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
@@ -79,11 +141,47 @@ func main() {
 var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 	"r": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		hero := pickHeroRandom()
+
+		detail, err := fetchHeroDetail(hero.Key)
+		if err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "ヒーローの詳細を取得できませんでした。",
+				},
+			})
+			return
+		}
+
+		// Assuming detail[0] contains the hero details
+		hitpoints := detail.Hitpoints
 		embed := &discordgo.MessageEmbed{
 			Title:       hero.Name,
 			Description: fmt.Sprintf("役割: %s", hero.Role),
 			Image: &discordgo.MessageEmbedImage{
 				URL: hero.Portrait,
+			},
+			Fields: []*discordgo.MessageEmbedField{
+				{
+					Name:   "Shields",
+					Value:  fmt.Sprintf("%d", hitpoints.Shields),
+					Inline: true,
+				},
+				{
+					Name:   "Armor",
+					Value:  fmt.Sprintf("%d", hitpoints.Armor),
+					Inline: true,
+				},
+				{
+					Name:   "Health",
+					Value:  fmt.Sprintf("%d", hitpoints.Health),
+					Inline: true,
+				},
+				{
+					Name:   "Total",
+					Value:  fmt.Sprintf("%d", hitpoints.Total),
+					Inline: true,
+				},
 			},
 		}
 
