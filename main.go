@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"strings"
+
 	"net/http"
 
 	"github.com/bwmarrin/discordgo"
@@ -116,6 +118,18 @@ func main() {
 
 	commands := []*discordgo.ApplicationCommand{
 		{
+			Name:        "hero",
+			Description: "ヒーローの詳細を表示します",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "name",
+					Description: "ヒーロー名",
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        "r",
 			Description: "ランダムにヒーローをピックします",
 		},
@@ -153,8 +167,6 @@ var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 			return
 		}
 
-		// Assuming detail[0] contains the hero details
-		hitpoints := detail.Hitpoints
 		embed := &discordgo.MessageEmbed{
 			Title:       hero.Name,
 			Description: fmt.Sprintf("Role: %s", hero.Role),
@@ -164,22 +176,22 @@ var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 			Fields: []*discordgo.MessageEmbedField{
 				{
 					Name:   "Shields",
-					Value:  fmt.Sprintf("%d", hitpoints.Shields),
+					Value:  fmt.Sprintf("%d", detail.Hitpoints.Shields),
 					Inline: true,
 				},
 				{
 					Name:   "Armor",
-					Value:  fmt.Sprintf("%d", hitpoints.Armor),
+					Value:  fmt.Sprintf("%d", detail.Hitpoints.Armor),
 					Inline: true,
 				},
 				{
 					Name:   "Health",
-					Value:  fmt.Sprintf("%d", hitpoints.Health),
+					Value:  fmt.Sprintf("%d", detail.Hitpoints.Health),
 					Inline: true,
 				},
 				{
 					Name:   "Total",
-					Value:  fmt.Sprintf("%d", hitpoints.Total),
+					Value:  fmt.Sprintf("%d", detail.Hitpoints.Total),
 					Inline: true,
 				},
 			},
@@ -191,6 +203,58 @@ var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 				Embeds: []*discordgo.MessageEmbed{embed},
 			},
 		})
+	},
+	"hero": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		cmdData := i.ApplicationCommandData()
+		if len(cmdData.Options) > 0 {
+			name := strings.ToLower(cmdData.Options[0].StringValue())
+			hero, err := fetchHeroDetail(name)
+			if err != nil {
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "ヒーローの詳細を取得できませんでした。",
+					},
+				})
+				return
+			}
+			embed := &discordgo.MessageEmbed{
+				Title:       hero.Name,
+				Description: fmt.Sprintf("Role: %s", hero.Role),
+				Image: &discordgo.MessageEmbedImage{
+					URL: hero.Portrait,
+				},
+				Fields: []*discordgo.MessageEmbedField{
+					{
+						Name:   "Shields",
+						Value:  fmt.Sprintf("%d", hero.Hitpoints.Shields),
+						Inline: true,
+					},
+					{
+						Name:   "Armor",
+						Value:  fmt.Sprintf("%d", hero.Hitpoints.Armor),
+						Inline: true,
+					},
+					{
+						Name:   "Health",
+						Value:  fmt.Sprintf("%d", hero.Hitpoints.Health),
+						Inline: true,
+					},
+					{
+						Name:   "Total",
+						Value:  fmt.Sprintf("%d", hero.Hitpoints.Total),
+						Inline: true,
+					},
+				},
+			}
+	
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Embeds: []*discordgo.MessageEmbed{embed},
+				},
+			})
+		}
 	},
 }
 
