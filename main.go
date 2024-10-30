@@ -157,7 +157,7 @@ var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 		hitpoints := detail.Hitpoints
 		embed := &discordgo.MessageEmbed{
 			Title:       hero.Name,
-			Description: fmt.Sprintf("役割: %s", hero.Role),
+			Description: fmt.Sprintf("Role: %s", hero.Role),
 			Image: &discordgo.MessageEmbedImage{
 				URL: hero.Portrait,
 			},
